@@ -1,77 +1,78 @@
 %{
 #include <string>
+#include <vector>
 
 using namespace std;
 
 string lexema;
-string buffer;
+
+/*
+ * Função auxiliar para processar literais de string.
+ */
+string processar_string(const char* texto) {
+    string s = "";
+    for (int i = 1; texto[i] != '\0' && texto[i+1] != '\0'; i++) {
+        if (texto[i] == '\\' && texto[i+1] != '\0') {
+            i++; // Pula a barra e processa o próximo caractere
+            switch (texto[i]) {
+                case 'n': s += '\n'; break;
+                case 't': s += '\t'; break;
+                // CORREÇÃO: Removida a contrabarra '\' do final do comentário abaixo
+                default: s += texto[i]; break; // Para \" adiciona ", para \\ adiciona
+            }
+        } else {
+            s += texto[i];
+        }
+    }
+    return s;
+}
 %}
 
-%option noyywrap
-%x COMMENT DQUOTE SQUOTE BSTR
-
-DIGITO      [0-9]
-LETRA       [a-zA-Z]
-ID_START    ({LETRA}|_)
-ID_CHARS    ({LETRA}|{DIGITO}|_)
-ID_NORMAL   {ID_START}{ID_CHARS}*
-ID_DOLAR    \${ID_CHARS}+
+/* Definições Regulares (Aliases) */
+WS			[ \t\n]+
+DIGITO		[0-9]
+LETRA		[a-zA-Z]
+ID_START	({LETRA}|_)
+ID_CHARS	({LETRA}|{DIGITO}|_)
+ID_NORMAL	{ID_START}{ID_CHARS}*
+ID_DOLAR	\${ID_CHARS}+
 
 %%
-[ \t\r]+    /* Ignorado */
-\n          /* Ignorado */
 
-"//".* { lexema = yytext; return _COMENTARIO; }
+{WS}				{ /* Ignora whitespace */ }
 
-"/*"        { buffer.clear(); BEGIN(COMMENT); }
-<COMMENT>"*/" { lexema = buffer; BEGIN(INITIAL); return _COMENTARIO; }
-<COMMENT>\n { buffer += yytext; }
-<COMMENT>.  { buffer += yytext; }
+	/* --- Comentários (usando Regex completo) --- */
+"//".*				{ lexema = yytext; return _COMENTARIO; }
+\/\*([^*]|\*+[^*/])*\*+\/	{ lexema = yytext; return _COMENTARIO; }
 
-\"                  { buffer.clear(); BEGIN(DQUOTE); }
-<DQUOTE>\"\"        { buffer += '"'; }
-<DQUOTE>\\\"        { buffer += '"'; }
-<DQUOTE>\\n         { buffer += '\n'; }
-<DQUOTE>\\[^"]      { buffer += yytext[1]; }
-<DQUOTE>[^"\\\n]+   { buffer += yytext; }
-<DQUOTE>\"          { lexema = buffer; BEGIN(INITIAL); return _STRING; }
-<DQUOTE>\n          { printf("Erro: String nao pode quebrar linha.\n"); BEGIN(INITIAL); }
+	/* --- Strings (usando Regex completo) --- */
+\"([^"\\]|\\.)*\"	{ lexema = processar_string(yytext); return _STRING; }
+\'([^'\\]|\\.)*\'	{ lexema = processar_string(yytext); return _STRING; }
+\`\`([^\`\\]|\\.)*\`\`	{ lexema = processar_string(yytext); return _STRING2; }
 
-\'                  { buffer.clear(); BEGIN(SQUOTE); }
-<SQUOTE>\'\'        { buffer += '\''; }
-<SQUOTE>\\\'        { buffer += '\''; }
-<SQUOTE>\\n         { buffer += '\n'; }
-<SQUOTE>\\[^']      { buffer += yytext[1]; }
-<SQUOTE>[^'\\\n]+   { buffer += yytext; }
-<SQUOTE>\'          { lexema = buffer; BEGIN(INITIAL); return _STRING; }
-<SQUOTE>\n          { printf("Erro: String nao pode quebrar linha.\n"); BEGIN(INITIAL); }
+	/* --- Palavras-chave --- */
+[fF][oO][rR]		{ lexema = yytext; return _FOR; }
+[iI][fF]			{ lexema = yytext; return _IF; }
 
+	/* --- Operadores --- */
+">="				{ lexema = yytext; return _MAIG; }
+"<="				{ lexema = yytext; return _MEIG; }
+"=="				{ lexema = yytext; return _IG; }
+"!="				{ lexema = yytext; return _DIF; }
 
-\`\`                  { buffer.clear(); BEGIN(BSTR); }
-<BSTR>\`\`            { lexema = buffer; BEGIN(INITIAL); return _STRING2; }
-<BSTR>\\`\`           { buffer += '`'; }
-<BSTR>\\.            { buffer += yytext[1]; }
-<BSTR>[^`\`\\]+       { buffer += yytext; } /* Esta era a linha mais problemática */
-<BSTR>\n             { buffer += '\n'; }
+	/* --- Números (_FLOAT antes de _INT) --- */
+{DIGITO}+\.{DIGITO}*([eE][+-]?{DIGITO}+)?	{ lexema = yytext; return _FLOAT; }
+{DIGITO}+[eE][+-]?{DIGITO}+				{ lexema = yytext; return _FLOAT; }
+{DIGITO}+			{ lexema = yytext; return _INT; }
 
-
-[fF][oO][rR]  { lexema = yytext; return _FOR; }
-[iI][fF]      { lexema = yytext; return _IF; }
-
-">="          { lexema = yytext; return _MAIG; }
-"<="          { lexema = yytext; return _MEIG; }
-"=="          { lexema = yytext; return _IG; }
-"!="          { lexema = yytext; return _DIF; }
-
-{DIGITO}+\.{DIGITO}*([eE][+-]?{DIGITO}+)? { lexema = yytext; return _FLOAT; }
-{DIGITO}+[eE][+-]?{DIGITO}+              { lexema = yytext; return _FLOAT; }
-{DIGITO}+     { lexema = yytext; return _INT; }
-
+	/* --- Identificadores --- */
 {ID_DOLAR}|{ID_NORMAL} { lexema = yytext; return _ID; }
 
-.   { printf("Caractere invalido: '%s'\n", yytext); }
+	/* --- Regra Final para caracteres únicos --- */
+.					{ return *yytext; }
 
 %%
-void yyerror(const char* s) {  
-  fprintf( stderr, "Erro: %s\n", s );
-}
+/*
+ * Esta seção fica VAZIA.
+ * A função main() e outras necessárias estão no seu arquivo main.cc.
+ */
