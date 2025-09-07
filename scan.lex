@@ -63,29 +63,42 @@ ID_INVALIDO_DOLAR   \${ID_CHARS}*\$[a-zA-Z0-9_\$]*
 [iI][fF]			{ lexema = yytext; return _IF; }
 
 	/* --- STRING --- */
-\"([^"\n\\]|\\.|"\"")*\"	{
-	string s = "";
-	char delimitador = yytext[0];
+\"([^"\n\\]|\\.)*\"   |
+\'([^'\n\\]|\\.)*\'   {
+    string s = "";
+    // Pega o delimitador correto (' ou "), que é o primeiro caractere
+    const char delimitador = yytext[0]; 
+    int len = yyleng;
 
-	for (int i = 1; yytext[i] != '\0' && yytext[i+1] != '\0'; i++) {
-		if (yytext[i] == '\\') {
-			i++;
-			switch (yytext[i]) {
-				case 'n': s += '\n'; break;
-				case 't': s += '\t'; break;
-				default: s += yytext[i]; break;
-			}
-		} 
-		else if (yytext[i] == delimitador && yytext[i+1] == delimitador) {
-			s += delimitador;
-			i++;
-		}
-		else {
-			s += yytext[i];
-		}
-	}
-	lexema = s;
-	return _STRING;
+    for ( int i = 1; i < len - 1; i++ ) {
+        // 1. Checa por escapes com CONTRABARRA
+        if ( yytext[i] == '\\' ) {
+            i++; 
+            switch (yytext[i]) {
+                case 'n': s += "\\n"; break;
+                case 't': s += "\\t"; break;
+                // Para \" ou \', adiciona o caractere sem a barra
+                case '"': s += '"'; break;
+                case '\'': s += '\''; break;
+                case '\\': s += '\\'; break;
+                default: 
+                    s += '\\';
+                    s += yytext[i];
+                    break;
+            }
+        } 
+        // 2. Checa por escapes com DELIMITADOR DUPLICADO ("" ou '')
+        else if ( yytext[i] == delimitador && yytext[i+1] == delimitador ) {
+            s += delimitador; // Adiciona um único delimitador
+            i++;              // Pula o segundo do par
+        }
+        // 3. Se não for escape, é um caractere normal
+        else {
+            s += yytext[i];
+        }
+    }
+    lexema = s;
+    return _STRING; // Use o token correto para String
 }
 
 \'([^'\n\\]|\\.|'\'')*\'	{
