@@ -7,35 +7,6 @@ using namespace std;
 string lexema;
 
 extern int yylineno;
-
-string processar_string(const char* texto) {
-    string s = "";
-    char delimitador = texto[0]; // Captura o tipo de aspas ('"', '\'', ou '`')
-
-    // Loop do segundo ao penúltimo caractere para ignorar as aspas externas
-    for (int i = 1; texto[i] != '\0' && texto[i+1] != '\0'; i++) {
-        // Trata escape com contrabarra (ex: \")
-        if (texto[i] == '\\') {
-            i++; // Pula a barra e pega o próximo caractere
-            switch (texto[i]) {
-                case 'n': s += '\n'; break;
-                case 't': s += '\t'; break;
-                // CORREÇÃO: Removida a contrabarra '\' do final do comentário
-                default: s += texto[i]; break; // Para \" adiciona ", para \\ adiciona
-            }
-        } 
-        // Trata escape com aspas duplas (ex: '')
-        else if (texto[i] == delimitador && texto[i+1] == delimitador) {
-            s += delimitador; // Adiciona uma das aspas
-            i++;              // Pula a segunda aspa do par
-        }
-        // Caractere normal
-        else {
-            s += texto[i];
-        }
-    }
-    return s;
-}
 %}
 
 /* Definições Regulares */
@@ -53,7 +24,7 @@ ID_INVALIDO_DOLAR   \${ID_CHARS}*\$[a-zA-Z0-9_\$]*
 
 {WS}				{ /* Ignora whitespace */ }
 
-	/* --- Regra de Erro para Identificadores Inválidos (DEVE VIR PRIMEIRO) --- */
+	/* --- Regra de Erro para Identificadores Inválidos --- */
 {ID_INVALIDO_A}|{ID_INVALIDO_DOLAR}	{ printf("Erro: Identificador invalido: %s\n", yytext); }
 
 	/* --- Comentários e Palavras-chave --- */
@@ -62,85 +33,84 @@ ID_INVALIDO_DOLAR   \${ID_CHARS}*\$[a-zA-Z0-9_\$]*
 [fF][oO][rR]		{ lexema = yytext; return _FOR; }
 [iI][fF]			{ lexema = yytext; return _IF; }
 
-	/* --- STRING --- */
-\"([^"\n\\]|\\.)*\"   |
-\'([^'\n\\]|\\.)*\'   {
+	/* --- STRING PADRÃO --- */
+\"(\\.|""|[^\\"\n])*\" {
     string s = "";
-    // Pega o delimitador correto (' ou "), que é o primeiro caractere
-    const char delimitador = yytext[0]; 
-    int len = yyleng;
-
-    for ( int i = 1; i < len - 1; i++ ) {
-        // 1. Checa por escapes com CONTRABARRA
-        if ( yytext[i] == '\\' ) {
-            i++; 
-            switch (yytext[i]) {
-                case 'n': s += "\\n"; break;
-                case 't': s += "\\t"; break;
-                // Para \" ou \', adiciona o caractere sem a barra
-                case '"': s += '"'; break;
-                case '\'': s += '\''; break;
-                case '\\': s += '\\'; break;
-                default: 
-                    s += '\\';
-                    s += yytext[i];
-                    break;
-            }
-        } 
-        // 2. Checa por escapes com DELIMITADOR DUPLICADO ("" ou '')
-        else if ( yytext[i] == delimitador && yytext[i+1] == delimitador ) {
-            s += delimitador; // Adiciona um único delimitador
-            i++;              // Pula o segundo do par
-        }
-        // 3. Se não for escape, é um caractere normal
-        else {
-            s += yytext[i];
-        }
+    const char delimitador = yytext[0];
+    const int len = yyleng;
+    for (int i = 1; i < len - 1; i++) {
+        if (yytext[i] == '\\') {
+            if (i + 1 < len - 1) { i++; switch (yytext[i]) {
+                    case 'n': s += "\\n"; break; case 't': s += "\\t"; break;
+                    case '"': s += '"';  break;  case '\'': s += '\''; break;
+                    case '\\': s += '\\'; break; default: s += '\\'; s += yytext[i]; break;
+            } } else { s += '\\'; }
+        } else if (yytext[i] == delimitador && (i + 1 < len - 1) && yytext[i+1] == delimitador) {
+            s += delimitador; i++;
+        } else { s += yytext[i]; }
     }
     lexema = s;
-    return _STRING; // Use o token correto para String
+    return _STRING;
 }
 
-\'([^'\n\\]|\\.|'\'')*\'	{
-	string s = "";
-	char delimitador = yytext[0];
-
-	for (int i = 1; yytext[i] != '\0' && yytext[i+1] != '\0'; i++) {
-		if (yytext[i] == '\\') {
-			i++;
-			switch (yytext[i]) {
-				case 'n': s += '\n'; break;
-				case 't': s += '\t'; break;
-				default: s += yytext[i]; break;
-			}
-		} 
-		else if (yytext[i] == delimitador && yytext[i+1] == delimitador) {
-			s += delimitador;
-			i++;
-		}
-		else {
-			s += yytext[i];
-		}
-	}
-	lexema = s;
-	return _STRING;
+\'(\\.|''|[^\\'\n])*\' {
+    string s = "";
+    const char delimitador = yytext[0];
+    const int len = yyleng;
+    for (int i = 1; i < len - 1; i++) {
+        if (yytext[i] == '\\') {
+            if (i + 1 < len - 1) { i++; switch (yytext[i]) {
+                    case 'n': s += "\\n"; break; case 't': s += "\\t"; break;
+                    case '"': s += '"';  break;  case '\'': s += '\''; break;
+                    case '\\': s += '\\'; break; default: s += '\\'; s += yytext[i]; break;
+            } } else { s += '\\'; }
+        } else if (yytext[i] == delimitador && (i + 1 < len - 1) && yytext[i+1] == delimitador) {
+            s += delimitador; i++;
+        } else { s += yytext[i]; }
+    }
+    lexema = s;
+    return _STRING;
 }
 
-    /* --- STRING2 --- */
+	/* --- STRING 2 --- */
+\`([^\\`]|\\.)*\` {
+    string content(yytext + 1, yyleng - 2);
+    string buffer = "";
 
-\`\`([^\`\\]|\\.)*\`\` {
-	string s = "";
-	for (int i = 1; yytext[i] != '\0' && yytext[i+1] != '\0'; i++) {
-		if (yytext[i] == '\\') {
-			i++;
-			s += yytext[i];
-		} else {
-			s += yytext[i];
-		}
-	}
-	lexema = s;
-	return _STRING2;
+    for (int i = 0; i < content.length(); ++i) {
+        if (content[i] == '$' && i + 1 < content.length() && content[i+1] == '{') {
+            if (!buffer.empty()) {
+                printf("%d %s\n", _STRING2, buffer.c_str());
+                buffer = "";
+            }
+
+            i += 2; 
+            int start_expr = i;
+            int brace_count = 1;
+
+            while (i < content.length()) {
+                if (content[i] == '{') brace_count++;
+                else if (content[i] == '}') brace_count--;
+                
+                if (brace_count == 0) break;
+                i++;
+            }
+
+            if (brace_count == 0) {
+                string var = content.substr(start_expr, i - start_expr);
+				printf ( "%d %s\n", _EXPR, var.c_str() );
+            }
+
+        } else {
+            buffer += content[i];
+        }
+    }
+
+    if (!buffer.empty()) {
+        printf("%d %s\n", _STRING2, buffer.c_str());
+    }
 }
+
 
 	/* --- Operadores --- */
 ">="				{ lexema = yytext; return _MAIG; }
@@ -149,22 +119,18 @@ ID_INVALIDO_DOLAR   \${ID_CHARS}*\$[a-zA-Z0-9_\$]*
 "!="				{ lexema = yytext; return _DIF; }
 
 	/* --- Números (_FLOAT antes de _INT) --- */
-{DIGITO}+\.{DIGITO}*([eE][+-]?{DIGITO}+)?	{ lexema = yytext; return _FLOAT; }
+{DIGITO}+\.{DIGITO}*([eE][+-]?{DIGITO}+)? { lexema = yytext; return _FLOAT; }
 {DIGITO}+[eE][+-]?{DIGITO}+				{ lexema = yytext; return _FLOAT; }
 {DIGITO}+			{ lexema = yytext; return _INT; }
 
 	/* --- Identificadores Válidos --- */
-\${ID_CHARS}+		{ lexema = yytext; return _ID; } 
-\$					{ lexema = yytext; return _ID; } 
+\${ID_CHARS}+		{ lexema = yytext; return _ID; }
+\$					{ lexema = yytext; return _ID; }
 {ID_NORMAL}			{ lexema = yytext; return _ID; }
 
 {SIMBOLOS}			{ lexema = yytext; return yytext[0]; }
 
 	/* --- Regra Final para outros caracteres inválidos --- */
-.					{ fprintf(stderr, "Erro lexico na linha %d: Caractere invalido '%s'\n", yylineno, yytext); }
+. { fprintf(stderr, "Erro lexico na linha %d: Caractere invalido '%s'\n", yylineno, yytext); }
 
 %%
-
-int yywrap() {
-	return 1;
-}
