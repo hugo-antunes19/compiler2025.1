@@ -1,0 +1,439 @@
+Nonterminals useless in grammar
+
+    CMD_CONST
+    CONST_VARs
+    CONST_VAR
+    CMD_IF
+    LVALUEPROP
+    E
+
+
+Terminals unused in grammar
+
+    IF
+    ELSE
+    CONST
+    PRINT
+    FOR
+    CDOUBLE
+    CSTRING
+    CINT
+    AND
+    OR
+    ME_IG
+    MA_IG
+    DIF
+    IGUAL
+    MAIS_IGUAL
+    MAIS_MAIS
+    MENOS_IGUAL
+    MENOS_MENOS
+    '='
+    '<'
+    '>'
+    '+'
+    '-'
+    '*'
+    '/'
+    '%'
+    '['
+    '.'
+    '('
+    ')'
+    ']'
+
+
+Rules useless in grammar
+
+   18 CMD: CMD_CONST ';'
+   19    | LVALUE '=' E ';'
+   20    | CMD_IF
+   21    | PRINT '(' E ')' ';'
+   22    | E ';'
+
+   23 LET_VAR: LVALUE '=' E
+   24        | LVALUE '=' '{' E '}'
+
+   25 VAR_VAR: LVALUE '=' E
+
+   26 CMD_CONST: CONST CONST_VARs
+
+   27 CONST_VARs: CONST_VAR ',' CONST_VARs
+   28           | CONST_VAR
+
+   29 CONST_VAR: LVALUE '=' E
+
+   30 CMD_IF: IF '(' E ')' CMD ELSE CMD
+
+   31 LVALUEPROP: E '[' E ']'
+   32           | E '.' ID
+
+   33 E: LVALUEPROP '=' E
+   34  | E '<' E
+   35  | E '>' E
+   36  | E '+' E
+   37  | E '-' E
+   38  | E '*' E
+   39  | E '/' E
+   40  | E '%' E
+
+
+Grammar
+
+    0 $accept: S $end
+
+    1 S: CMDs
+    2  | ε
+
+    3 CMDs: CMDs CMD
+    4     | CMD
+
+    5 CMD: CMD_LET ';'
+    6    | CMD_VAR ';'
+    7    | '{' CMDs '}'
+    8    | ';'
+
+    9 CMD_LET: LET LET_VARs
+
+   10 LET_VARs: LET_VAR ',' LET_VARs
+   11         | LET_VAR
+
+   12 LET_VAR: LVALUE
+
+   13 CMD_VAR: VAR VAR_VARs
+
+   14 VAR_VARs: VAR_VAR ',' VAR_VARs
+   15         | VAR_VAR
+
+   16 VAR_VAR: LVALUE
+
+   17 LVALUE: ID
+
+
+Terminals, with rules where they appear
+
+    $end (0) 0
+    '%' (37)
+    '(' (40)
+    ')' (41)
+    '*' (42)
+    '+' (43)
+    ',' (44) 10 14
+    '-' (45)
+    '.' (46)
+    '/' (47)
+    ';' (59) 5 6 8
+    '<' (60)
+    '=' (61)
+    '>' (62)
+    '[' (91)
+    ']' (93)
+    '{' (123) 7
+    '}' (125) 7
+    error (256)
+    ID (258) 17
+    IF (259)
+    ELSE (260)
+    LET (261) 9
+    CONST (262)
+    VAR (263) 13
+    PRINT (264)
+    FOR (265)
+    CDOUBLE (266)
+    CSTRING (267)
+    CINT (268)
+    AND (269)
+    OR (270)
+    ME_IG (271)
+    MA_IG (272)
+    DIF (273)
+    IGUAL (274)
+    MAIS_IGUAL (275)
+    MAIS_MAIS (276)
+    MENOS_IGUAL (277)
+    MENOS_MENOS (278)
+
+
+Nonterminals, with rules where they appear
+
+    $accept (41)
+        on left: 0
+    S (42)
+        on left: 1 2
+        on right: 0
+    CMDs (43)
+        on left: 3 4
+        on right: 1 3 7
+    CMD (44)
+        on left: 5 6 7 8
+        on right: 3 4
+    CMD_LET (45)
+        on left: 9
+        on right: 5
+    LET_VARs (46)
+        on left: 10 11
+        on right: 9 10
+    LET_VAR (47)
+        on left: 12
+        on right: 10 11
+    CMD_VAR (48)
+        on left: 13
+        on right: 6
+    VAR_VARs (49)
+        on left: 14 15
+        on right: 13 14
+    VAR_VAR (50)
+        on left: 16
+        on right: 14 15
+    LVALUE (51)
+        on left: 17
+        on right: 12 16
+
+
+State 0
+
+    0 $accept: • S $end
+
+    LET  shift, and go to state 1
+    VAR  shift, and go to state 2
+    ';'  shift, and go to state 3
+    '{'  shift, and go to state 4
+
+    $default  reduce using rule 2 (S)
+
+    S        go to state 5
+    CMDs     go to state 6
+    CMD      go to state 7
+    CMD_LET  go to state 8
+    CMD_VAR  go to state 9
+
+
+State 1
+
+    9 CMD_LET: LET • LET_VARs
+
+    ID  shift, and go to state 10
+
+    LET_VARs  go to state 11
+    LET_VAR   go to state 12
+    LVALUE    go to state 13
+
+
+State 2
+
+   13 CMD_VAR: VAR • VAR_VARs
+
+    ID  shift, and go to state 10
+
+    VAR_VARs  go to state 14
+    VAR_VAR   go to state 15
+    LVALUE    go to state 16
+
+
+State 3
+
+    8 CMD: ';' •
+
+    $default  reduce using rule 8 (CMD)
+
+
+State 4
+
+    7 CMD: '{' • CMDs '}'
+
+    LET  shift, and go to state 1
+    VAR  shift, and go to state 2
+    ';'  shift, and go to state 3
+    '{'  shift, and go to state 4
+
+    CMDs     go to state 17
+    CMD      go to state 7
+    CMD_LET  go to state 8
+    CMD_VAR  go to state 9
+
+
+State 5
+
+    0 $accept: S • $end
+
+    $end  shift, and go to state 18
+
+
+State 6
+
+    1 S: CMDs •
+    3 CMDs: CMDs • CMD
+
+    LET  shift, and go to state 1
+    VAR  shift, and go to state 2
+    ';'  shift, and go to state 3
+    '{'  shift, and go to state 4
+
+    $default  reduce using rule 1 (S)
+
+    CMD      go to state 19
+    CMD_LET  go to state 8
+    CMD_VAR  go to state 9
+
+
+State 7
+
+    4 CMDs: CMD •
+
+    $default  reduce using rule 4 (CMDs)
+
+
+State 8
+
+    5 CMD: CMD_LET • ';'
+
+    ';'  shift, and go to state 20
+
+
+State 9
+
+    6 CMD: CMD_VAR • ';'
+
+    ';'  shift, and go to state 21
+
+
+State 10
+
+   17 LVALUE: ID •
+
+    $default  reduce using rule 17 (LVALUE)
+
+
+State 11
+
+    9 CMD_LET: LET LET_VARs •
+
+    $default  reduce using rule 9 (CMD_LET)
+
+
+State 12
+
+   10 LET_VARs: LET_VAR • ',' LET_VARs
+   11         | LET_VAR •
+
+    ','  shift, and go to state 22
+
+    $default  reduce using rule 11 (LET_VARs)
+
+
+State 13
+
+   12 LET_VAR: LVALUE •
+
+    $default  reduce using rule 12 (LET_VAR)
+
+
+State 14
+
+   13 CMD_VAR: VAR VAR_VARs •
+
+    $default  reduce using rule 13 (CMD_VAR)
+
+
+State 15
+
+   14 VAR_VARs: VAR_VAR • ',' VAR_VARs
+   15         | VAR_VAR •
+
+    ','  shift, and go to state 23
+
+    $default  reduce using rule 15 (VAR_VARs)
+
+
+State 16
+
+   16 VAR_VAR: LVALUE •
+
+    $default  reduce using rule 16 (VAR_VAR)
+
+
+State 17
+
+    3 CMDs: CMDs • CMD
+    7 CMD: '{' CMDs • '}'
+
+    LET  shift, and go to state 1
+    VAR  shift, and go to state 2
+    ';'  shift, and go to state 3
+    '{'  shift, and go to state 4
+    '}'  shift, and go to state 24
+
+    CMD      go to state 19
+    CMD_LET  go to state 8
+    CMD_VAR  go to state 9
+
+
+State 18
+
+    0 $accept: S $end •
+
+    $default  accept
+
+
+State 19
+
+    3 CMDs: CMDs CMD •
+
+    $default  reduce using rule 3 (CMDs)
+
+
+State 20
+
+    5 CMD: CMD_LET ';' •
+
+    $default  reduce using rule 5 (CMD)
+
+
+State 21
+
+    6 CMD: CMD_VAR ';' •
+
+    $default  reduce using rule 6 (CMD)
+
+
+State 22
+
+   10 LET_VARs: LET_VAR ',' • LET_VARs
+
+    ID  shift, and go to state 10
+
+    LET_VARs  go to state 25
+    LET_VAR   go to state 12
+    LVALUE    go to state 13
+
+
+State 23
+
+   14 VAR_VARs: VAR_VAR ',' • VAR_VARs
+
+    ID  shift, and go to state 10
+
+    VAR_VARs  go to state 26
+    VAR_VAR   go to state 15
+    LVALUE    go to state 16
+
+
+State 24
+
+    7 CMD: '{' CMDs '}' •
+
+    $default  reduce using rule 7 (CMD)
+
+
+State 25
+
+   10 LET_VARs: LET_VAR ',' LET_VARs •
+
+    $default  reduce using rule 10 (LET_VARs)
+
+
+State 26
+
+   14 VAR_VARs: VAR_VAR ',' VAR_VARs •
+
+    $default  reduce using rule 14 (VAR_VARs)

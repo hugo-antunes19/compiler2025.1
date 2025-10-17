@@ -6,19 +6,27 @@
 
 using namespace std;
 
-int linha = 1, coluna = 1; 
+int linha = 1, coluna = 0; 
 
 struct Atributos {
   vector<string> c; // Código
-
   int linha = 0, coluna = 0;
-
-  void clear() {
-    c.clear();
-    linha = 0;
-    coluna = 0;
-  }
+  void clear() { c.clear(); linha = 0; coluna = 0; }
 };
+
+enum TipoDecl { Let = 1, Const, Var };
+
+struct Simbolo {
+  TipoDecl tipo;
+  int linha;
+  int coluna;
+};
+
+map< string, Simbolo > ts; // Tabela de símbolos
+
+Atributos declara_var( TipoDecl tipo, Atributos atrib );
+
+void checa_simbolo( string nome, bool modificavel );
 
 #define YYSTYPE Atributos
 
@@ -32,7 +40,8 @@ vector<string> concatena( vector<string> a, vector<string> b ) {
 }
 
 vector<string> operator+( vector<string> a, vector<string> b ) {
-  return concatena( a, b );
+  a.insert( a.end(), b.begin(), b.end() );
+  return a;
 }
 
 vector<string> operator+( vector<string> a, string b ) {
@@ -65,6 +74,10 @@ string gera_label( string prefixo ) {
   return prefixo + "_" + to_string( ++n ) + ":";
 }
 
+string define_label( string label) {
+  return ":" + label;
+}
+
 void print( vector<string> codigo ) {
   for( string s : codigo )
     cout << s << " ";
@@ -73,38 +86,88 @@ void print( vector<string> codigo ) {
 }
 %}
 
-%token ID IF ELSE LET PRINT
+%token ID IF ELSE LET CONST VAR PRINT FOR
 %token CDOUBLE CSTRING CINT
 %token AND OR ME_IG MA_IG DIF IGUAL
-%token MAIS_IGUAL MAIS_MAIS
+%token MAIS_IGUAL MAIS_MAIS MENOS_IGUAL MENOS_MENOS
 
+%right '='
 %nonassoc '<' '>'
+%left '+' '-'
+%left '*' '/' '%'
+%left '['
+%left '.'
 
 %%
 
 S : CMDs { print( resolve_enderecos( $1.c + "." ) ); }
+  | { /* Programa vazio */ }
   ;
 
-CMDs : CMDs CMD  { $$.c = $1.c + $2.c; };
+CMDs : CMDs CMD  { $$.c = $1.c + $2.c; }
      | CMD
      ;
      
 CMD : CMD_LET ';'
+    | CMD_VAR ';'
+    | CMD_CONST ';'
     | CMD_IF
-    | PRINT E ';' 
+    | PRINT E  ';' 
       { $$.c = $2.c + "println" + "#"; }
+    | E ';'
+      { $$.c = $1.c + "^"; }
+    | '{' CMDs '}'  
+      { $$.c = $2.c; }
+    | ';'
+      { $$.c.clear(); }
     ;
-    
-CMD_LET : LET VARs { $$.c = $2.c; }
+
+
+CMD_LET : LET LET_VARs { $$.c = $2.c; }
         ;
 
-VARs : VAR ',' VARs { $$.c = $1.c + $3.c; } 
-     | VAR
-     ;
+LET_VARs : LET_VAR ',' LET_VARs { $$.c = $1.c + $3.c; } 
+         | LET_VAR
+         ;
 
-VAR : ID  { $$.c = $1.c + "&"; }
-    ;
-     
+LET_VAR : LVALUE  
+          { $$.c = declara_var( Let, $1 ).c; }
+        | LVALUE '=' E
+          { 
+            $$.c = declara_var( Let, $1 ).c + 
+                   $1.c + $3.c + "=" + "^"; }
+        | LVALUE '=' '{' E '}'
+          {
+            $$.c = declara_var( Let, $1 ).c +
+            $1.c + "{}" + "=" + "^"; }
+        ;
+  
+CMD_VAR : VAR VAR_VARs { $$.c = $2.c; }
+        ;
+        
+VAR_VARs : VAR_VAR ',' VAR_VARs { $$.c = $1.c + $3.c; } 
+         | VAR_VAR
+         ;
+
+VAR_VAR : LVALUE  
+          { $$.c = declara_var( Var, $1 ).c; }
+        | LVALUE '=' E
+          {  $$.c = declara_var( Var, $1 ).c + 
+                    $1.c + $3.c + "=" + "^"; }
+        ;
+
+CMD_CONST: CONST CONST_VARs { $$.c = $2.c; }
+         ;
+
+CONST_VARs : CONST_VAR ',' CONST_VARs { $$.c = $1.c + $3.c; } 
+           | CONST_VAR
+           ;
+
+CONST_VAR : LVALUE '=' E
+            { $$.c = declara_var( Const, $1 ).c + 
+                     $1.c + $3.c + "=" + "^"; }
+          ;
+
 CMD_IF : IF '(' E ')' CMD ELSE CMD
          { string lbl_true = gera_label( "lbl_true" );
            string lbl_fim_if = gera_label( "lbl_fim_if" );
@@ -118,28 +181,80 @@ CMD_IF : IF '(' E ')' CMD ELSE CMD
                    definicao_lbl_fim_if         // Fim do IF
                    ;
          }
-E : E '<' E
+       ;
+        
+LVALUE : ID 
+       ;
+
+LVALUEPROP : E '[' E ']'
+           | E '.' ID  
+           ;
+
+E : LVALUEPROP '=' E 	
+  | E '<' E
     { $$.c = $1.c + $3.c + $2.c; }
   | E '>' E
     { $$.c = $1.c + $3.c + $2.c; }
-  | ID
-  | CDOUBLE
-  | CINT
+  | E '+' E
+    { $$.c = $1.c + $3.c + $2.c; }
+  | E '-' E
+    { $$.c = $1.c + $3.c + $2.c; }
+  | E '*' E
+    { $$.c = $1.c + $3.c + $2.c; }
+  | E '/' E
+    { $$.c = $1.c + $3.c + $2.c; }
+  | E '%' E
+    { $$.c = $1.c + $3.c + $2.c; }
   ;
-  
-  
+
 %%
 
 #include "lex.yy.c"
 
+Atributos declara_var( TipoDecl tipo, Atributos atrib ) {
+      
+  string nome_var = atrib.c[0];
+  string mensagem_erro;
+
+  if (tipo == Var){
+    if( ts.count(nome_var) > 0 && ts[nome_var].tipo != Var){
+      yyerror("Variavel já declarada com var ou let");
+    }
+    atrib.c.clear();
+  } 
+  else if (ts.count(nome_var) > 0){
+    cerr << "Erro: a variável '" << nome_var << "' ja foi declarada na linha " << to_string(ts[nome_var].linha) << "." << endl;
+    exit(1);
+  }
+  else{
+    ts[nome_var].linha = atrib.linha;
+    ts[nome_var].coluna = atrib.coluna;
+    ts[nome_var].tipo = tipo;
+    atrib.c = atrib.c + "&";
+  }
+  return atrib;
+}
+
+void checa_simbolo( string nome, bool modificavel ) {
+  if( ts.count( nome ) > 0 ) {
+    if( modificavel && ts[nome].tipo == Const ) {
+      cerr << "Erro: a variável '" << nome << "' não pode ser modificada." << endl;
+      exit( 1 );     
+    }
+  }
+  else {
+    cerr << "Erro: a variável '" << nome << "' não foi declarada." << endl;
+    exit( 1 );     
+  }
+}
+
 void yyerror( const char* st ) {
-   puts( st ); 
-   printf( "Proximo a: %s\n", yytext );
+   fprintf( stderr, "%s\n", st ); 
+   fprintf( stderr, "Proximo a: %s\n", yytext );
    exit( 1 );
 }
 
 int main( int argc, char* argv[] ) {
   yyparse();
-  
   return 0;
 }

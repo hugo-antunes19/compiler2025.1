@@ -3,19 +3,24 @@ int token( int tk );
 %}
 
 D  	    [0-9]
-L   	    [A-Za-z_]
+L   	[A-Za-z_]
 INT	    {D}+
-DOUBLE      {D}+"."{D}+([Ee][+\-]?{D}+)?
-ID          {L}({L}|{D})*
+DOUBLE  {D}+"."{D}+([Ee][+\-]?{D}+)?
+ID      {L}({L}|{D})*
+CSTR   \"([^\"\n\\]|(\\\")|\"\"|"\\\\")+\"
+CSTR2   \'([^\'\n\\]|(\\\')|\'\'|'\\\\')+\'
+
 
 %%
 
 "\t"       { coluna += 4; }
 " "        { coluna++; }
-"\n"	   { linha++; coluna = 1; }
+"\n"	   { linha++; coluna = 0; }
+"\r"	   { }
 
 {DOUBLE}   { return token( CDOUBLE ); }
-{INT}	   { return token( CINT ); } 
+{INT}	   { return token( CINT ); }
+{CSTR}|{CSTR2} { return token ( CSTRING ); }
 
 "&&"	   { return token( AND ); }
 "||"	   { return token( OR ); }
@@ -26,8 +31,12 @@ ID          {L}({L}|{D})*
 
 "+="       { return token( MAIS_IGUAL ); }
 "++"       { return token( MAIS_MAIS ); }
+"-="       { return token( MENOS_IGUAL ); }
+"--"       { return token( MENOS_MENOS ); }
 
 "let"      { return token( LET ); }
+"const"    { return token( CONST ); }
+"var"      { return token( VAR ); }
 "if"       { return token( IF ); }
 "else"     { return token( ELSE ); }
 "print"    { return token( PRINT ); }
@@ -38,10 +47,10 @@ ID          {L}({L}|{D})*
 
 %%
 
-int token( int tk ) {  
+int token( int tk ) {
   yylval.c = vector<string>{ yytext };
-  coluna += strlen( yytext ); 
-  
+  coluna += strlen( yytext );
+
   yylval.linha = linha;
   yylval.coluna = coluna;
 
