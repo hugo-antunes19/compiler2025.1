@@ -1551,26 +1551,26 @@ yyreduce:
                                                       {
             string lbl_ini = gera_label("for_ini");
             string lbl_fim = gera_label("for_fim");
-            yyval.c = yyvsp[-6].c + // Inicialização (agora sempre limpa a pilha)
-                   (":" + lbl_ini) + // Início do loop
-                   yyvsp[-4].c + "!" + lbl_fim + "?" + // Condição
-                   yyvsp[0].c + // Corpo do loop
-                   yyvsp[-2].c + "^" + // Pós-iteração
-                   lbl_ini + "#" + // Salto para o início
-                   (":" + lbl_fim); // Fim do loop
+            yyval.c = yyvsp[-6].c +
+                   (":" + lbl_ini) + 
+                   yyvsp[-4].c + "!" + lbl_fim + "?" +
+                   yyvsp[0].c + 
+                   yyvsp[-2].c + "^" +
+                   lbl_ini + "#" + 
+                   (":" + lbl_fim);
         }
 #line 1563 "y.tab.c"
     break;
 
   case 38: /* E_opt: E  */
 #line 172 "mini_js.y"
-          { yyval.c = yyvsp[0].c; }
+          { yyval = yyvsp[0]; }
 #line 1569 "y.tab.c"
     break;
 
   case 39: /* E_opt: %empty  */
 #line 172 "mini_js.y"
-                             { yyval.c.clear(); }
+                         { yyval.c.clear(); }
 #line 1575 "y.tab.c"
     break;
 
@@ -1938,7 +1938,7 @@ yyreturnlab:
 Atributos declara_var( TipoDecl tipo, Atributos atrib ) {
   string nome_var = atrib.c[0];
   if (tipo != Var && ts.count(nome_var) > 0) {
-    cerr << "Erro (linha " << atrib.linha << "): a variável '" << nome_var << "' já foi declarada na linha " << ts[nome_var].linha << "." << endl;
+    cerr << "Erro: a variável '" << nome_var << "' ja foi declarada na linha " << ts[nome_var].linha << "." << endl;
     exit(1);
   }
   ts[nome_var] = { tipo, atrib.linha, atrib.coluna };

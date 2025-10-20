@@ -153,7 +153,7 @@ CMD_WHILE: WHILE '(' E ')' CMD {
 /* Nova regra para a inicialização do FOR */
 FOR_INIT : CMD_LET { $$ = $1; }
          | CMD_VAR { $$ = $1; }
-         | E { $$.c = $1.c + "^"; } /* Adiciona o pop para expressões */
+         | E { $$.c = $1.c + "^"; }
          | /* empty */ { $$.c.clear(); }
          ;
 
@@ -161,15 +161,15 @@ FOR_INIT : CMD_LET { $$ = $1; }
 CMD_FOR: FOR '(' FOR_INIT ';' E_opt ';' E_opt ')' CMD {
             string lbl_ini = gera_label("for_ini");
             string lbl_fim = gera_label("for_fim");
-            $$.c = $3.c + // Inicialização (agora sempre limpa a pilha)
-                   (":" + lbl_ini) + // Início do loop
-                   $5.c + "!" + lbl_fim + "?" + // Condição
-                   $9.c + // Corpo do loop
-                   $7.c + "^" + // Pós-iteração
-                   lbl_ini + "#" + // Salto para o início
-                   (":" + lbl_fim); // Fim do loop
+            $$.c = $3.c +
+                   (":" + lbl_ini) + 
+                   $5.c + "!" + lbl_fim + "?" +
+                   $9.c + 
+                   $7.c + "^" +
+                   lbl_ini + "#" + 
+                   (":" + lbl_fim);
         };
-E_opt : E { $$.c = $1.c; } | { $$.c.clear(); };
+E_opt : E { $$ = $1; } | { $$.c.clear(); };
         
 LVALUE : ID;
 
@@ -218,7 +218,7 @@ E : LVALUE '=' E { checa_simbolo( $1.c[0], true ); $$.c = $1.c + $3.c + "="; }
 Atributos declara_var( TipoDecl tipo, Atributos atrib ) {
   string nome_var = atrib.c[0];
   if (tipo != Var && ts.count(nome_var) > 0) {
-    cerr << "Erro (linha " << atrib.linha << "): a variável '" << nome_var << "' já foi declarada na linha " << ts[nome_var].linha << "." << endl;
+    cerr << "Erro: a variável '" << nome_var << "' ja foi declarada na linha " << ts[nome_var].linha << "." << endl;
     exit(1);
   }
   ts[nome_var] = { tipo, atrib.linha, atrib.coluna };
