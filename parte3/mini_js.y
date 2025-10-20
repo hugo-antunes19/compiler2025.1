@@ -94,8 +94,6 @@ void print( vector<string> codigo ) {
 
 %%
 
-/* Regras da Gramática */
-
 S : CMDs { if(!$1.c.empty()) print( resolve_enderecos( $1.c + "." ) ); }
   | { /* Programa vazio */ }
   ;
@@ -111,12 +109,11 @@ CMD : CMD_LET ';'
     | CMD_WHILE
     | CMD_FOR
     | PRINT E ';' { $$.c = $2.c + "println" + "#"; }
-    | E ';' { $$.c = $1.c + "^"; } /* Uma expressão como comando */
+    | E ';' { $$.c = $1.c + "^"; }
     | '{' CMDs '}' { $$.c = $2.c; }
     | ';' { $$.clear(); }
     ;
 
-/* Declarações de Variáveis */
 CMD_LET : LET LET_VARs { $$.c = $2.c; };
 LET_VARs : LET_VAR ',' LET_VARs { $$.c = $1.c + $3.c; } | LET_VAR;
 LET_VAR : ID { $$.c = declara_var( Let, $1 ).c; }
@@ -133,7 +130,6 @@ CMD_CONST: CONST CONST_VARs { $$.c = $2.c; };
 CONST_VARs : CONST_VAR ',' CONST_VARs { $$.c = $1.c + $3.c; } | CONST_VAR;
 CONST_VAR : ID '=' E { $$.c = declara_var( Const, $1 ).c + $1.c + $3.c + "=" + "^"; };
 
-/* Estruturas de Controle */
 CMD_IF : IF '(' E ')' CMD {
             string lbl_fim = gera_label( "if_fim" );
             $$.c = $3.c + "!" + lbl_fim + "?" + $5.c + (":" + lbl_fim);
@@ -162,7 +158,7 @@ E_opt : E | { $$.clear(); };
         
 LVALUE : ID;
 
-LVALUEPROP : E '.' ID { $$.c = $1.c + "\"" + $3.c[0] + "\""; }
+LVALUEPROP : E '.' ID { $$.c = $1.c + ("\"" + $3.c[0] + "\""); }
            | E '[' E ']' { $$.c = $1.c + $3.c; }
            ;
 
@@ -192,7 +188,7 @@ E : LVALUE '=' E { checa_simbolo( $1.c[0], true ); $$.c = $1.c + $3.c + "="; }
   | '[' ']' { $$.c.clear(); $$.c.push_back("[]"); }
   | LVALUE MAIS_MAIS { 
       checa_simbolo( $1.c[0], true );
-      $$.c = $1.c + "@" + $1.c + $1.c + "@" + "1" + "+" + "=" + "^"; 
+      $$.c = $1.c + "@" + $1.c + $1.c + "@" + "1" + "+" + "=" + "^";
     }
   | MAIS_MAIS LVALUE {
       checa_simbolo( $2.c[0], true );
