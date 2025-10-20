@@ -62,19 +62,21 @@ extern int yydebug;
     VAR = 263,                     /* VAR  */
     PRINT = 264,                   /* PRINT  */
     FOR = 265,                     /* FOR  */
-    CDOUBLE = 266,                 /* CDOUBLE  */
-    CSTRING = 267,                 /* CSTRING  */
-    CINT = 268,                    /* CINT  */
-    AND = 269,                     /* AND  */
-    OR = 270,                      /* OR  */
-    ME_IG = 271,                   /* ME_IG  */
-    MA_IG = 272,                   /* MA_IG  */
-    DIF = 273,                     /* DIF  */
-    IGUAL = 274,                   /* IGUAL  */
-    MAIS_IGUAL = 275,              /* MAIS_IGUAL  */
-    MAIS_MAIS = 276,               /* MAIS_MAIS  */
-    MENOS_IGUAL = 277,             /* MENOS_IGUAL  */
-    MENOS_MENOS = 278              /* MENOS_MENOS  */
+    WHILE = 266,                   /* WHILE  */
+    CDOUBLE = 267,                 /* CDOUBLE  */
+    CSTRING = 268,                 /* CSTRING  */
+    CINT = 269,                    /* CINT  */
+    AND = 270,                     /* AND  */
+    OR = 271,                      /* OR  */
+    ME_IG = 272,                   /* ME_IG  */
+    MA_IG = 273,                   /* MA_IG  */
+    DIF = 274,                     /* DIF  */
+    IGUAL = 275,                   /* IGUAL  */
+    MAIS_IGUAL = 276,              /* MAIS_IGUAL  */
+    MAIS_MAIS = 277,               /* MAIS_MAIS  */
+    MENOS_IGUAL = 278,             /* MENOS_IGUAL  */
+    MENOS_MENOS = 279,             /* MENOS_MENOS  */
+    UNARIO = 280                   /* UNARIO  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif

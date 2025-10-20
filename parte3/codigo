@@ -1,0 +1,1 @@
+obj & obj {} = ^ i & i 2 neg = ^ obj @ nome "Manoel" []= ^ obj @ nums [] []= ^ obj @ nums [@] 0 12 []= ^ obj @ nums [@] 3 12 []= ^ obj @ nums [@] 3 [@] 1 + obj @ nums [@] 3 []= ^ obj @ nums [@] i @ i i @ 1 + = 3 + 45 []= ^ obj @ "nom" "e" + obj @ nome [@] "!" + []= ^ . 
