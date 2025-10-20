@@ -114,6 +114,7 @@ CMD : CMD_LET ';'
     | ';' { $$.clear(); }
     ;
 
+/* Declarações de Variáveis */
 CMD_LET : LET LET_VARs { $$.c = $2.c; };
 LET_VARs : LET_VAR ',' LET_VARs { $$.c = $1.c + $3.c; } | LET_VAR;
 LET_VAR : ID { $$.c = declara_var( Let, $1 ).c; }
@@ -130,6 +131,7 @@ CMD_CONST: CONST CONST_VARs { $$.c = $2.c; };
 CONST_VARs : CONST_VAR ',' CONST_VARs { $$.c = $1.c + $3.c; } | CONST_VAR;
 CONST_VAR : ID '=' E { $$.c = declara_var( Const, $1 ).c + $1.c + $3.c + "=" + "^"; };
 
+/* Estruturas de Controle */
 CMD_IF : IF '(' E ')' CMD {
             string lbl_fim = gera_label( "if_fim" );
             $$.c = $3.c + "!" + lbl_fim + "?" + $5.c + (":" + lbl_fim);
@@ -148,13 +150,26 @@ CMD_WHILE: WHILE '(' E ')' CMD {
             $$.c = (":" + lbl_ini) + $3.c + "!" + lbl_fim + "?" + $5.c + lbl_ini + "#" + (":" + lbl_fim);
          };
 
-CMD_FOR: FOR '(' E_opt ';' E_opt ';' E_opt ')' CMD {
+/* Nova regra para a inicialização do FOR */
+FOR_INIT : CMD_LET { $$ = $1; }
+         | CMD_VAR { $$ = $1; }
+         | E { $$.c = $1.c + "^"; } /* Adiciona o pop para expressões */
+         | /* empty */ { $$.c.clear(); }
+         ;
+
+/* Regra CMD_FOR atualizada */
+CMD_FOR: FOR '(' FOR_INIT ';' E_opt ';' E_opt ')' CMD {
             string lbl_ini = gera_label("for_ini");
             string lbl_fim = gera_label("for_fim");
-            $$.c = $3.c + "^" + (":" + lbl_ini) + $5.c + "!" + lbl_fim + "?" + 
-                   $9.c + $7.c + "^" + lbl_ini + "#" + (":" + lbl_fim);
+            $$.c = $3.c + // Inicialização (agora sempre limpa a pilha)
+                   (":" + lbl_ini) + // Início do loop
+                   $5.c + "!" + lbl_fim + "?" + // Condição
+                   $9.c + // Corpo do loop
+                   $7.c + "^" + // Pós-iteração
+                   lbl_ini + "#" + // Salto para o início
+                   (":" + lbl_fim); // Fim do loop
         };
-E_opt : E | { $$.clear(); };
+E_opt : E { $$.c = $1.c; } | { $$.c.clear(); };
         
 LVALUE : ID;
 
