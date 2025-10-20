@@ -22,7 +22,7 @@ struct Simbolo {
   int coluna;
 };
 
-map< string, Simbolo > ts; // Tabela de símbolos
+map< string, Simbolo > ts;
 
 Atributos declara_var( TipoDecl tipo, Atributos atrib );
 void checa_simbolo( string nome, bool modificavel );
@@ -59,6 +59,7 @@ vector<string> resolve_enderecos( vector<string> entrada ) {
   for( int i = 0; i < saida.size(); i++ ) 
     if( label.count( saida[i] ) > 0 )
         saida[i] = to_string(label[saida[i]]);
+        
   return saida;
 }
 
@@ -73,25 +74,27 @@ void print( vector<string> codigo ) {
   cout << endl;  
 }
 
-string define_label( string label) {
-  return ":" + label;
-}
-
 %}
 
+/* Definição dos Tokens */
 %token ID IF ELSE LET CONST VAR PRINT FOR WHILE
 %token CDOUBLE CSTRING CINT
 %token AND OR ME_IG MA_IG DIF IGUAL
 %token MAIS_IGUAL MAIS_MAIS MENOS_IGUAL MENOS_MENOS
 
+/* Precedência e Associatividade dos Operadores */
 %right '=' MAIS_IGUAL MENOS_IGUAL
-%nonassoc '<' '>' ME_IG MA_IG IGUAL DIF
+%nonassoc IGUAL DIF
+%nonassoc '<' '>' ME_IG MA_IG
 %left '+' '-'
 %left '*' '/' '%'
+%right MAIS_MAIS MENOS_MENOS
 %precedence UNARIO
-%left '[' '.'
+%left '.' '[' '(' 
 
 %%
+
+/* Regras da Gramática */
 
 S : CMDs { if(!$1.c.empty()) print( resolve_enderecos( $1.c + "." ) ); }
   | { /* Programa vazio */ }
@@ -108,111 +111,93 @@ CMD : CMD_LET ';'
     | CMD_WHILE
     | CMD_FOR
     | PRINT E ';' { $$.c = $2.c + "println" + "#"; }
-    | E ';' { $$.c = $1.c + "^"; }
+    | E ';' { $$.c = $1.c + "^"; } /* Uma expressão como comando */
     | '{' CMDs '}' { $$.c = $2.c; }
-    | ';' { $$.c.clear(); }
+    | ';' { $$.clear(); }
     ;
 
+/* Declarações de Variáveis */
 CMD_LET : LET LET_VARs { $$.c = $2.c; };
 LET_VARs : LET_VAR ',' LET_VARs { $$.c = $1.c + $3.c; } | LET_VAR;
-LET_VAR : LVALUE { $$.c = declara_var( Let, $1 ).c; }
-        | LVALUE '=' E { $$.c = declara_var( Let, $1 ).c + $1.c + $3.c + "=" + "^"; }
+LET_VAR : ID { $$.c = declara_var( Let, $1 ).c; }
+        | ID '=' E { $$.c = declara_var( Let, $1 ).c + $1.c + $3.c + "=" + "^"; }
         ;
   
 CMD_VAR : VAR VAR_VARs { $$.c = $2.c; };
 VAR_VARs : VAR_VAR ',' VAR_VARs { $$.c = $1.c + $3.c; } | VAR_VAR;
-VAR_VAR : LVALUE { $$.c = declara_var( Var, $1 ).c; }
-        | LVALUE '=' E { $$.c = declara_var( Var, $1 ).c + $1.c + $3.c + "=" + "^"; }
+VAR_VAR : ID { $$.c = declara_var( Var, $1 ).c; }
+        | ID '=' E { $$.c = declara_var( Var, $1 ).c + $1.c + $3.c + "=" + "^"; }
         ;
 
 CMD_CONST: CONST CONST_VARs { $$.c = $2.c; };
 CONST_VARs : CONST_VAR ',' CONST_VARs { $$.c = $1.c + $3.c; } | CONST_VAR;
-CONST_VAR : LVALUE '=' E { $$.c = declara_var( Const, $1 ).c + $1.c + $3.c + "=" + "^"; };
+CONST_VAR : ID '=' E { $$.c = declara_var( Const, $1 ).c + $1.c + $3.c + "=" + "^"; };
 
-CMD_IF : IF '(' E ')' CMD
-         {
-           string lbl_fim = gera_label( "lbl_fim" );
-           $$.c = $3.c + "!" + lbl_fim + "?" + $5.c + "^" + (":" + lbl_fim);
+/* Estruturas de Controle */
+CMD_IF : IF '(' E ')' CMD {
+            string lbl_fim = gera_label( "if_fim" );
+            $$.c = $3.c + "!" + lbl_fim + "?" + $5.c + (":" + lbl_fim);
          }
-        | IF '(' E ')' CMD ELSE CMD
-          {
-            string lbl_else = gera_label( "lbl_else" );
-            string lbl_fim = gera_label( "lbl_fim" );
-          
-            $$.c = $3.c                                // Condição
-                  + "!" + lbl_else + "?"              // Se falsa, pula para o else
-                  + $5.c                              // Corpo do IF
-                  + lbl_fim + "#"                     // << PULO INCONDICIONAL PARA O FIM
-                  + (":" + lbl_else)                  // Início do ELSE
-                  + $7.c                              // Corpo do ELSE
-                  + (":" + lbl_fim);                  // Fim de tudo
-          }
+       | IF '(' E ')' CMD ELSE CMD {
+            string lbl_else = gera_label( "if_else" );
+            string lbl_fim = gera_label( "if_fim" );
+            $$.c = $3.c + "!" + lbl_else + "?" + $5.c + lbl_fim + "#" + 
+                   (":" + lbl_else) + $7.c + (":" + lbl_fim);
+         }
        ;
 
 CMD_WHILE: WHILE '(' E ')' CMD {
-           string lbl_ini = gera_label("lbl_ini_while");
-           string lbl_fim = gera_label("lbl_fim_while");
-           $$.c = ":" + lbl_ini + $3.c + lbl_fim + "?" + $5.c + lbl_ini + "#" + ":" + lbl_fim;
+            string lbl_ini = gera_label("while_ini");
+            string lbl_fim = gera_label("while_fim");
+            $$.c = (":" + lbl_ini) + $3.c + "!" + lbl_fim + "?" + $5.c + lbl_ini + "#" + (":" + lbl_fim);
          };
 
 CMD_FOR: FOR '(' E_opt ';' E_opt ';' E_opt ')' CMD {
-            string lbl_ini = gera_label("lbl_ini_for");
-            string lbl_fim = gera_label("lbl_fim_for");
-            $$.c = $3.c + "^" + ":" + lbl_ini + $5.c + lbl_fim + "?" + $9.c + $7.c + "^" + lbl_ini + "#" + ":" + lbl_fim;
+            string lbl_ini = gera_label("for_ini");
+            string lbl_fim = gera_label("for_fim");
+            $$.c = $3.c + "^" + (":" + lbl_ini) + $5.c + "!" + lbl_fim + "?" + 
+                   $9.c + $7.c + "^" + lbl_ini + "#" + (":" + lbl_fim);
         };
-
-E_opt : E { $$.c = $1.c; } | { $$.c.clear(); };
+E_opt : E | { $$.clear(); };
         
 LVALUE : ID;
 
-LVALUEPROP : E '[' E ']' { $$.c = $1.c + $3.c; }
-           | E '.' ID { $$.c = $1.c + $3.c; }
+LVALUEPROP : E '.' ID { $$.c = $1.c + "\"" + $3.c[0] + "\""; }
+           | E '[' E ']' { $$.c = $1.c + $3.c; }
            ;
-           
+
 E : LVALUE '=' E { checa_simbolo( $1.c[0], true ); $$.c = $1.c + $3.c + "="; }
-  | LVALUE MAIS_IGUAL E 
-    {
-      checa_simbolo( $1.c[0], true );
-      $$.c = $1.c + $1.c + "@" + $3.c + "+" + "=";
-    }
-| LVALUE MAIS_MAIS 
-  {
-      checa_simbolo( $1.c[0], true );
-      $$.c = $1.c + "@" + $1.c + $1.c + "@" + "1" + "+" + "=";
-    }
-  | LVALUEPROP '=' E { $$.c = $1.c + $3.c + "[]="; }
-  | LVALUEPROP MAIS_IGUAL E { $$.c = $1.c + "[@]" + $3.c + "+" + $1.c + "[]="; }
-| LVALUEPROP MAIS_MAIS 
-    {
-      $$.c = $1.c + "[@]" + " " +
-             $1.c + " " + $1.c + "[@]" + " 1" + " + " + "[]=";                                    // (3) Limpeza
-    }
+  | LVALUE MAIS_IGUAL E { checa_simbolo( $1.c[0], true ); $$.c = $1.c + $1.c + "@" + $3.c + "+" + "="; }
+  | LVALUEPROP '=' E { $$.c = $1.c + $3.c + "[=]"; }
+  | LVALUEPROP MAIS_IGUAL E { $$.c = $1.c + $1.c + "[@]" + $3.c + "+" + "[=]"; }
+  | E '<' E { $$.c = $1.c + $3.c + "<"; }
+  | E '>' E { $$.c = $1.c + $3.c + ">"; }
+  | E ME_IG E { $$.c = $1.c + $3.c + "<="; }
+  | E MA_IG E { $$.c = $1.c + $3.c + ">="; }
+  | E IGUAL E { $$.c = $1.c + $3.c + "=="; }
+  | E DIF E { $$.c = $1.c + $3.c + "!="; }
+  | E '+' E { $$.c = $1.c + $3.c + "+"; }
+  | E '-' E { $$.c = $1.c + $3.c + "-"; }
+  | E '*' E { $$.c = $1.c + $3.c + "*"; }
+  | E '/' E { $$.c = $1.c + $3.c + "/"; }
+  | E '%' E { $$.c = $1.c + $3.c + "%"; }
+  | '-' E %prec UNARIO { $$.c = "0" + $2.c + "-"; }
   | '(' E ')' { $$.c = $2.c; }
-  | LVALUEPROP { $$.c = $1.c + "[@]"; }
   | LVALUE { checa_simbolo( $1.c[0], false ); $$.c = $1.c + "@"; }
-  | E '<' E { $$.c = $1.c + $3.c + $2.c; }
-  | E '>' E { $$.c = $1.c + $3.c + $2.c; }
-  | E ME_IG E { $$.c = $1.c + $3.c + $2.c; }
-  | E MA_IG E { $$.c = $1.c + $3.c + $2.c; }
-  | E IGUAL E { $$.c = $1.c + $3.c + $2.c; }
-  | E DIF E { $$.c = $1.c + $3.c + $2.c; }
-  | E '+' E { $$.c = $1.c + $3.c + $2.c; }
-  | E '-' E { $$.c = $1.c + $3.c + $2.c; }
-  | E '*' E { $$.c = $1.c + $3.c + $2.c; }
-  | E '/' E { $$.c = $1.c + $3.c + $2.c; }
-  | E '%' E { $$.c = $1.c + $3.c + $2.c; }
-  | '-' E %prec UNARIO { $$.c = $2.c + "neg"; }
-  | CINT | CDOUBLE 
-  | CSTRING
-    {
-      string s = $1.c[0];                       // 1. Get the raw string (e.g., "'world'")
-      s = s.substr(1, s.length() - 2);        // 2. Remove the original quotes -> world
-      $$.c = vector<string>{"\"" + s + "\""};  // 3. Wrap in double quotes -> "world"
+  | LVALUEPROP { $$.c = $1.c + "[@]"; }
+  | CINT 
+  | CDOUBLE 
+  | CSTRING { string s = $1.c[0]; s = s.substr(1, s.length() - 2); $$.c = vector<string>{"\"" + s + "\""}; }
+  | '{' '}' { $$.c.clear(); $$.c.push_back("{}"); }
+  | '[' ']' { $$.c.clear(); $$.c.push_back("[]"); }
+  | LVALUE MAIS_MAIS { 
+      checa_simbolo( $1.c[0], true );
+      $$.c = $1.c + "@" + $1.c + $1.c + "@" + "1" + "+" + "=" + "^"; 
     }
-  | '{' '}'
-    { $$.c.clear(); $$.c.push_back("{}"); } // Gera o token único "{}"
-  | '[' ']'
-    { $$.c.clear(); $$.c.push_back("[]"); } // Gera o token único "[]"
+  | MAIS_MAIS LVALUE {
+      checa_simbolo( $2.c[0], true );
+      $$.c = $2.c + $2.c + "@" + "1" + "+" + "=";
+    }
   ;
 
 %%
@@ -222,7 +207,7 @@ E : LVALUE '=' E { checa_simbolo( $1.c[0], true ); $$.c = $1.c + $3.c + "="; }
 Atributos declara_var( TipoDecl tipo, Atributos atrib ) {
   string nome_var = atrib.c[0];
   if (tipo != Var && ts.count(nome_var) > 0) {
-    cerr << "Erro: a variável '" << nome_var << "' ja foi declarada na linha " << ts[nome_var].linha << "." << endl;
+    cerr << "Erro (linha " << atrib.linha << "): a variável '" << nome_var << "' já foi declarada na linha " << ts[nome_var].linha << "." << endl;
     exit(1);
   }
   ts[nome_var] = { tipo, atrib.linha, atrib.coluna };
@@ -236,14 +221,13 @@ void checa_simbolo( string nome, bool modificavel ) {
     exit( 1 );     
   }
   if( modificavel && ts[nome].tipo == Const ) {
-    cerr << "Erro: a variável '" << nome << "' não pode ser modificada." << endl;
+    cerr << "Erro: a variável constante '" << nome << "' não pode ser modificada." << endl;
     exit( 1 );     
   }
 }
 
 void yyerror( const char* st ) {
-   fprintf( stderr, "syntax error\n" );
-   fprintf( stderr, "Proximo a: %s\n", yytext );
+   fprintf( stderr, "Erro de sintaxe próximo a: %s (linha %d)\n", yytext, linha );
    exit( 1 );
 }
 

@@ -7,14 +7,13 @@ L         [A-Za-z_]
 INT       {D}+
 DOUBLE    {D}+"."{D}+([Ee][+\-]?{D}+)?
 ID        {L}({L}|{D})*
-CSTR      \"([^\"\n\\]|(\\\")|\"\"|"\\\\")+\"
-CSTR2     \'([^\'\n\\]|(\\\')|\'\'|'\\\\')+\'
+CSTR      \"([^\"\n\\]|(\\\")|\"\"|"\\\\")*\"
+CSTR2     \'([^\'\n\\]|(\\\')|\'\'|'\\\\')*\'
 
 %%
 
-"\t"      { coluna += 4; }
-" "       { coluna++; }
-"\n"      { linha++; coluna = 0; }
+[ \t]+    { coluna += yyleng; }
+"\n"      { linha++; coluna = 1; }
 "\r"      { }
 
 {DOUBLE}  { return token( CDOUBLE ); }
@@ -52,6 +51,6 @@ int token( int tk ) {
   yylval.c = vector<string>{ yytext };
   yylval.linha = linha;
   yylval.coluna = coluna;
-  coluna += strlen( yytext );
+  coluna += yyleng;
   return tk;
 }
